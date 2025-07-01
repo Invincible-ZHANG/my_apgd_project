@@ -18,6 +18,17 @@ It is intended as a reference and research implementation for academic and engin
 
 本项目实现了适用于多体动力学补偿约束(CCP)问题的**加速投影梯度下降（APGD）数值求解器**，可作为算法学习、工程集成或学术研究的基础代码。
 
+
+---
+## 文件结构
+my_apgd_project/
+├── .vs/ # Visual Studio 工程文件
+├── solver/ # 源码主目录
+│ ├── include/ # 头文件（接口、声明等）
+│ ├── src/ # 源文件（主要实现）
+│ └── test/ # 测试代码
+└── README.md # 项目说明文件
+
 ---
 
 ## Features
@@ -50,12 +61,4 @@ cmake ..
 make
 
 
-
-my_apgd_project/
-│
-├── include/            # Header files
-├── src/                # Source code (APGD implementation, main, etc.)
-├── test/               # Test cases and demo examples
-├── README.md           # Project introduction
-└── ...                 # Other files (e.g., CMakeLists.txt)
 
