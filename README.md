@@ -22,6 +22,7 @@ It is intended as a reference and research implementation for academic and engin
 ---
 ## 文件结构
 
+```
 my_apgd_project/
 ├── .vs/ # Visual Studio 工程文件夹
 ├── solver/ # 源码主目录
@@ -29,6 +30,8 @@ my_apgd_project/
 │ ├── src/ # 源文件（主要实现）
 │ └── test/ # 测试代码
 └── README.md # 项目说明文件
+```
+
 ## 说明
 
 - `solver/include/`：放置所有头文件（如类声明、接口定义等）。
