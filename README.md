@@ -21,13 +21,21 @@ It is intended as a reference and research implementation for academic and engin
 
 ---
 ## 文件结构
+
 my_apgd_project/
-├── .vs/ # Visual Studio 工程文件
+├── .vs/ # Visual Studio 工程文件夹
 ├── solver/ # 源码主目录
 │ ├── include/ # 头文件（接口、声明等）
 │ ├── src/ # 源文件（主要实现）
 │ └── test/ # 测试代码
 └── README.md # 项目说明文件
+## 说明
+
+- `solver/include/`：放置所有头文件（如类声明、接口定义等）。
+- `solver/src/`：放置主要的源代码实现。
+- `solver/test/`：用于单元测试、验证算法正确性。
+- `.vs/`：Visual Studio 自动生成的工程配置文件，可以不用关心。
+
 
 ---
 
