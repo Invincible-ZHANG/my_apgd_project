@@ -8,13 +8,10 @@
 #include <vector>
 
 namespace VSLibRBDynamX {
+    
+    RBDSolverAPGD::RBDSolverAPGD() : nc(0), residual(0.0) {}
 
-    // Register into the object factory, to enable run-time dynamic creation and persistence
-    CH_FACTORY_REGISTER(ChSolverAPGD)
-
-        ChSolverAPGD::ChSolverAPGD() : nc(0), residual(0.0) {}
-
-    void ChSolverAPGD::SchurBvectorCompute(ChSystemDescriptor& sysd) {
+    void RBDSolverAPGD::SchurBvectorCompute(RBDSystemDescriptor& sysd) {
         // ***TO DO*** move the following thirty lines in a short function ChSystemDescriptor::SchurBvectorCompute() ?
 
         // Compute the b_schur vector in the Schur complement equation N*l = b_schur
@@ -44,7 +41,7 @@ namespace VSLibRBDynamX {
         r += tmp;
     }
 
-    double ChSolverAPGD::Res4(ChSystemDescriptor& sysd) {
+    double RBDSolverAPGD::Res4(RBDSystemDescriptor& sysd) {
         // Project the gradient (for rollback strategy)
         // g_proj = (l-project_orthogonal(l - gdiff*g, fric))/gdiff;
         double gdiff = 1.0 / (nc * nc);
@@ -56,7 +53,7 @@ namespace VSLibRBDynamX {
         return tmp.norm();
     }
 
-    double ChSolverAPGD::Solve(ChSystemDescriptor& sysd) {
+    double RBDSolverAPGD::Solve(RBDSystemDescriptor& sysd) {
         const std::vector<ChConstraint*>& mconstraints = sysd.GetConstraints();
         const std::vector<ChVariables*>& mvariables = sysd.GetVariables();
         if (verbose)
@@ -101,7 +98,7 @@ namespace VSLibRBDynamX {
 
         // Optimization: backup the  q  sparse data computed above,
         // because   (M^-1)*k   will be needed at the end when computing primals.
-        ChVectorDynamic<> Minvk;
+        RBDVectorDynamic<> Minvk;
         sysd.FromVariablesToVector(Minvk, true);
 
         // (1) gamma_0 = zeros(nc,1)
@@ -239,13 +236,13 @@ namespace VSLibRBDynamX {
         return residual;
     }
 
-    void ChSolverAPGD::Dump_Rhs(std::vector<double>& temp) {
+    void RBDSolverAPGD::Dump_Rhs(std::vector<double>& temp) {
         for (int i = 0; i < r.size(); i++) {
             temp.push_back(r(i));
         }
     }
 
-    void ChSolverAPGD::Dump_Lambda(std::vector<double>& temp) {
+    void RBDSolverAPGD::Dump_Lambda(std::vector<double>& temp) {
         for (int i = 0; i < gamma_hat.size(); i++) {
             temp.push_back(gamma_hat(i));
         }

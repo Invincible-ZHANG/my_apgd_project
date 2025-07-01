@@ -16,6 +16,7 @@
 // Authors: Zijian Zhang
 // Date:    2025-07-01
 // =============================================================================
+
 #ifndef CLASS_RBDYNAMX_RBDSOLVERAPGD
 #define CLASS_RBDYNAMX_RBDSOLVERAPGD
 
@@ -23,13 +24,13 @@
 
 namespace VSLibRBDynamX {
 
-    /// @addtogroup VSLibRBDynamX_solver
-    /// @{
+/// @addtogroup VSLibRBDynamX_solver
+/// @{
 
-    /// An iterative solver based on Nesterov's Projected Gradient Descent.
-    ///
-    /// See ChSystemDescriptor for more information about the problem formulation and the data structures passed to the
-    /// solver.
+/// An iterative solver based on Nesterov's Projected Gradient Descent.
+///
+/// See ChSystemDescriptor for more information about the problem formulation and the data structures passed to the
+/// solver.
     class RBDSolverAPGD : public RBDIterativeSolverVI {
     public:
         RBDSolverAPGD();
