@@ -1,3 +1,23 @@
+// =============================================================================
+//  RBDSolverAPGD.cpp
+//
+//  Implementation of an Accelerated Projected Gradient Descent (APGD) solver
+//  for multibody dynamics constrained systems. This solver uses the Nesterov
+//  accelerated projected gradient method to solve the Schur complement system
+//  resulting from constrained dynamics formulations (LCP/CCP).
+//
+//  Features:
+//   - Handles sparse constraints and variables
+//   - Implements projection and rollback strategies
+//   - Stores constraint violation history for debugging/performance tuning
+//
+//  Usage:
+//   - Works with VSLibRBDynamX::RBDSystemDescriptor for problem data
+//   - Called as part of the iterative solver interface
+//
+//  Author: Zijian Zhang
+//  Date: 2025-07-02
+// =============================================================================
 
 #include "RBDSolverAPGD.h"
 
