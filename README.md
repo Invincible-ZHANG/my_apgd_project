@@ -71,6 +71,8 @@ mkdir build && cd build
 cmake ..
 make
 
+```
+
 ## 更新日志 (Changelog)
 2025-07-02
 add RBDIterativeSolverVI.cpp and RBDIterativeSolverVI.h
