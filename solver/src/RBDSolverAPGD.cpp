@@ -268,4 +268,4 @@ namespace VSLibRBDynamX {
         }
     }
 
-}  // end namespace chrono
+}  // end namespace VSLibRBDynamX
