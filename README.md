@@ -285,15 +285,15 @@ make
 ### 阶段二：核心求解器迁移与接口实现
 1. 实现 RBDSolverAPGD
 
-- 按照 Chrono 的结构写 APGD 主循环，完全依赖接口，严禁直接访问 RBDRigidBody/RBDConstraintResource。
+   - 按照 Chrono 的结构写 APGD 主循环，完全依赖接口，严禁直接访问 RBDRigidBody/RBDConstraintResource。
 
-- 参数、状态量都为局部变量或通过接口维护。
+   - 参数、状态量都为局部变量或通过接口维护。
 
 2. 实现所有接口必要函数
 
-- 比如 Schur 补的组装、Jacobian 投影、变量分配、残差计算、ConstraintsProject 等。
+   - 比如 Schur 补的组装、Jacobian 投影、变量分配、残差计算、ConstraintsProject 等。
 
-- 可以参考 Chrono 的 ChSystemDescriptor / ChConstraint 等具体实现。
+   - 可以参考 Chrono 的 ChSystemDescriptor / ChConstraint 等具体实现。
 
 3. 单元测试（最小系统）
 
