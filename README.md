@@ -269,17 +269,17 @@ make
 
 2. 为原有 RBDRigidBody/RBDConstraintResource 写 Adapter/Wrapper 类
 
- - 例如 class MyRBDVariables : public RBDVariables，内部保存指针指向 RBDRigidBody。
+    - 例如 class MyRBDVariables : public RBDVariables，内部保存指针指向 RBDRigidBody。
 
- - 在函数如 ComputeMassInverseTimesVector 内部，直接调用 RBDRigidBody 的数据成员和方法。
+    - 在函数如 ComputeMassInverseTimesVector 内部，直接调用 RBDRigidBody 的数据成员和方法。
 
- - 这样新 solver 只用面向接口，物理数据“通过一层壳”访问。
+    - 这样新 solver 只用面向接口，物理数据“通过一层壳”访问。
 
 3. 开发和测试 SystemDescriptor 基本操作
 
- - 能够正确将所有 bodies/constraints 添加进集合，并实现变量与全局向量的读写转换。
+    - 能够正确将所有 bodies/constraints 添加进集合，并实现变量与全局向量的读写转换。
 
- - 先写最基础的功能，比如收集状态量、批量更新。
+    - 先写最基础的功能，比如收集状态量、批量更新。
 
 
 ### 阶段二：核心求解器迁移与接口实现
