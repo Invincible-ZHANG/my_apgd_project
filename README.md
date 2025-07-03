@@ -71,5 +71,36 @@ mkdir build && cd build
 cmake ..
 make
 
+```
+
+## 更新日志 (Changelog)
+
+---
+
+### 2025-07-02
+
+- **add RBDIterativeSolverVI.cpp and RBDIterativeSolverVI.h**  
+  新增迭代型 VI 求解器的头文件与实现。
+
+- **add APGD SOLVER COMMENT**  
+  补充 APGD 求解器相关代码注释，提升可读性。
+
+---
+
+### 2025-07-01
+
+- **modified APGD solver related cpp and h file**  
+  修改 APGD 求解器相关实现，修复细节，提升稳定性。
+
+- **README Update**  
+  更新项目说明文档。
+
+- **add VS project file, RBDSolverAPGD.cpp and RBDSolverAPGD.h**  
+  新增 Visual Studio 工程文件，补充 APGD 求解器主文件。
+
+- **Initial commit**  
+  项目初始化，创建基本文件结构。
+
+
 
 
