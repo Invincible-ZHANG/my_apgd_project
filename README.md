@@ -239,6 +239,11 @@ make
  - 脱离VEROSIM做一个简单DEMO测试工作
   - 不依靠chrono和verosim的任何相关库来完成这个demo。
 
+DEMO:
+ - 变量：x∈R,质量为 m=2.
+ - 约束：Cx+b=0,C=1,b=−4⟹x=−b=4.
+​
+
 ---
 ### 2025-07-03
 
