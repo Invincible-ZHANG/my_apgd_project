@@ -364,18 +364,18 @@ Verosim 的做法
 
 A2 ：类比：
   - 假如你有很多种不同品牌、不同类型的插头（物理对象），
-   -但是你只想用同一个插座（Solver），
-   -你就需要一个转换头（Adapter/Wrapper），这样无论插头什么样，只要有转换头都能用同一个插座。
+   - 但是你只想用同一个插座（Solver），
+   - 你就需要一个转换头（Adapter/Wrapper），这样无论插头什么样，只要有转换头都能用同一个插座。
 对应到你的工程：
- -物理对象（比如 RBDRigidBody、RBDConstraintResource）：每个数据结构不同，函数不同。
- -Solver（求解器）：需要“拿到数据、做统一的操作”（比如计算质量逆、设置状态等）。
- -RBDVariables（接口）：规定了一套“插头标准”（有 GetDOF、GetState、SetState、ComputeMassInverseTimesVector 这些统一操作）。
- -Adapter/Wrapper（MyRBDVariables）：就是转换头，让各种物理对象都能装到 Solver 里统一用。
+ - 物理对象（比如 RBDRigidBody、RBDConstraintResource）：每个数据结构不同，函数不同。
+ - Solver（求解器）：需要“拿到数据、做统一的操作”（比如计算质量逆、设置状态等）。
+ - RBDVariables（接口）：规定了一套“插头标准”（有 GetDOF、GetState、SetState、ComputeMassInverseTimesVector 这些统一操作）。
+ - Adapter/Wrapper（MyRBDVariables）：就是转换头，让各种物理对象都能装到 Solver 里统一用。
 
 实际作用/优点：
- -你的Solver 只依赖接口，不依赖具体实现，即“只认插头标准，不认品牌”。
- -以后你增加新的物理对象（比如柔体、流体、某种奇怪的刚体），不用改 Solver，只用写新的 Wrapper 就能接入。
- -代码扩展性、可维护性极强，比如 Chrono、PhysX、Bullet 等物理引擎底层都是这么做的。
+ - 你的Solver 只依赖接口，不依赖具体实现，即“只认插头标准，不认品牌”。
+ - 以后你增加新的物理对象（比如柔体、流体、某种奇怪的刚体），不用改 Solver，只用写新的 Wrapper 就能接入。
+ - 代码扩展性、可维护性极强，比如 Chrono、PhysX、Bullet 等物理引擎底层都是这么做的。
 
 
 
