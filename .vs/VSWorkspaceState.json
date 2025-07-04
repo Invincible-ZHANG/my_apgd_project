@@ -1,8 +1,16 @@
 {
   "ExpandedNodes": [
     "",
-    "\\solver"
+    "\\out",
+    "\\out\\build",
+    "\\RBDInterface",
+    "\\solver",
+    "\\solver\\include",
+    "\\solver\\src",
+    "\\solver\\test",
+    "\\test",
+    "\\Wrapper"
   ],
-  "SelectedNode": "\\README.md",
+  "SelectedNode": "\\solver\\test\\SimpleSystemDescriptor.h",
   "PreviewInSolutionExplorer": false
 }

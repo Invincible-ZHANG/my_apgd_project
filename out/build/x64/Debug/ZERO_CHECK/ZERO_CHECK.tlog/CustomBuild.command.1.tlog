@@ -1,0 +1,10 @@
+^C:\USERS\ZHANG\MY_APGD_PROJECT\OUT\BUILD\CMAKEFILES\92B72D3FF43D8C00599E70DDDC852442\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -SC:/Users/zhang/my_apgd_project -BC:/Users/zhang/my_apgd_project/out/build --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file C:/Users/zhang/my_apgd_project/out/build/MyAPGDTest.sln
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

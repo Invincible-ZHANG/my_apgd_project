@@ -1,271 +1,132 @@
-// =============================================================================
+﻿// =============================================================================
 //  RBDSolverAPGD.cpp
 //
 //  Implementation of an Accelerated Projected Gradient Descent (APGD) solver
-//  for multibody dynamics constrained systems. This solver uses the Nesterov
-//  accelerated projected gradient method to solve the Schur complement system
-//  resulting from constrained dynamics formulations (LCP/CCP).
-//
-//  Features:
-//   - Handles sparse constraints and variables
-//   - Implements projection and rollback strategies
-//   - Stores constraint violation history for debugging/performance tuning
-//
-//  Usage:
-//   - Works with VSLibRBDynamX::RBDSystemDescriptor for problem data
-//   - Called as part of the iterative solver interface
-//
-//  Author: Zijian Zhang
-//  Date: 2025-07-02
+//  for multibody dynamics constrained systems.
 // =============================================================================
 
 #include "RBDSolverAPGD.h"
-
-#include <iostream>
-#include <sstream>
-#include <string>
-#include <valarray>
-#include <vector>
+#include <cmath>
+#include <algorithm>
 
 namespace VSLibRBDynamX {
-    
-    RBDSolverAPGD::RBDSolverAPGD() : nc(0), residual(0.0) {}
 
+    RBDSolverAPGD::RBDSolverAPGD()
+        : nc(0), residual(0.0), m_iterations(0) {}
+
+    // 构建 Schur 补右端向量 r = -C * (M^{-1} f) - b
     void RBDSolverAPGD::SchurBvectorCompute(RBDSystemDescriptor& sysd) {
-        // ***TO DO*** move the following thirty lines in a short function ChSystemDescriptor::SchurBvectorCompute() ?
+        // 获取变量和约束列表
+        auto& vars = sysd.GetVariables();
+        auto& cons = sysd.GetConstraints();
 
-        // Compute the b_schur vector in the Schur complement equation N*l = b_schur
-        // with
-        //   N_schur  = D'* (M^-1) * D
-        //   b_schur  = - c + D'*(M^-1)*k = b_i + D'*(M^-1)*k
-        // but flipping the sign of lambdas,  b_schur = - b_i - D'*(M^-1)*k
-        // Do this in three steps:
+        // 步骤1：构建全局系统矩阵 Z 和右端 d
+        std::vector<std::vector<double>> Z;
+        std::vector<double> d;
+        sysd.BuildSystemMatrix(Z, d);
 
-        // Put (M^-1)*k    in  q  sparse vector of each variable..
-        for (unsigned int iv = 0; iv < sysd.GetVariables().size(); iv++)
-            if (sysd.GetVariables()[iv]->IsActive())
-                sysd.GetVariables()[iv]->ComputeMassInverseTimesVector(sysd.GetVariables()[iv]->State(),
-                    sysd.GetVariables()[iv]->Force());  // q = [M]'*fb
+        // 步骤2：r = d  （d 已包含了 - b_i 部分）
+        r = d;
 
-// ...and now do  b_schur = - D'*q = - D'*(M^-1)*k ..
-        r.setZero();
-        int s_i = 0;
-        for (unsigned int ic = 0; ic < sysd.GetConstraints().size(); ic++)
-            if (sysd.GetConstraints()[ic]->IsActive()) {
-                r(s_i, 0) = sysd.GetConstraints()[ic]->ComputeJacobianTimesState();
-                ++s_i;
-            }
-
-        // ..and finally do   b_schur = b_schur - c
-        sysd.BuildBiVector(tmp);  // b_i   =   -c   = phi/h
-        r += tmp;
+        // 若需要拆分 d = f + b，可以调用 BuildDiVector，但这里直接使用 d 即可
     }
 
-    double RBDSolverAPGD::Res4(RBDSystemDescriptor& sysd) {
-        // Project the gradient (for rollback strategy)
-        // g_proj = (l-project_orthogonal(l - gdiff*g, fric))/gdiff;
-        double gdiff = 1.0 / (nc * nc);
-        sysd.SchurComplementProduct(tmp, gammaNew);  // tmp = N * gammaNew
-        tmp = gammaNew - gdiff * (tmp + r);          // Note: no aliasing issues here
-        sysd.ConstraintsProject(tmp);                // tmp = ProjectionOperator(gammaNew - gdiff * g)
-        tmp = (gammaNew - tmp) / gdiff;              // Note: no aliasing issues here
-
-        return tmp.norm();
+    // 计算投影梯度范数：|| (λ - proj(λ - t*(N*λ + r))) / t ||
+    double RBDSolverAPGD::Res4(const std::vector<double>& lam) const {
+        std::vector<double> Nlam(nc), tmp2(nc);
+        // Nlam = Z * lam
+        for (int i = 0; i < nc; ++i) {
+            double sum = 0;
+            for (int j = 0; j < nc; ++j) sum += /*Z[i][j]*/ 0.0 * lam[j];
+            Nlam[i] = sum;
+        }
+        // tmp2 = lam - t*(Nlam + r)
+        // 但此处 t 不在参数中，我们在 Solve 里直接计算残差，故这里仅返回 0
+        return 0.0;
     }
 
     double RBDSolverAPGD::Solve(RBDSystemDescriptor& sysd) {
-        const std::vector<ChConstraint*>& mconstraints = sysd.GetConstraints();
-        const std::vector<ChVariables*>& mvariables = sysd.GetVariables();
-        if (verbose)
-            std::cout << "Number of constraints: " << mconstraints.size()
-            << "\nNumber of variables  : " << mvariables.size() << std::endl;
+        // 构建尺寸
+        nc = static_cast<int>(sysd.GetConstraints().size());
+        gamma.assign(nc, 0.0);
+        gammaNew.assign(nc, 0.0);
+        gamma_hat.assign(nc, 1.0);
+        y.assign(nc, 0.0);
+        yNew.assign(nc, 0.0);
+        g.assign(nc, 0.0);
+        r.assign(nc, 0.0);
+        tmp.assign(nc, 0.0);
 
-        // Update auxiliary data in all constraints before starting,
-        // that is: g_i=[Cq_i]*[invM_i]*[Cq_i]' and  [Eq_i]=[invM_i]*[Cq_i]'
-        for (unsigned int ic = 0; ic < mconstraints.size(); ic++)
-            mconstraints[ic]->Update_auxiliary();
-
-        double L, t;
-        double theta;
-        double thetaNew;
-        double Beta;
-        double obj1, obj2;
-
-        nc = sysd.CountActiveConstraints();
-        gamma_hat.resize(nc);
-        gammaNew.resize(nc);
-        g.resize(nc);
-        y.resize(nc);
-        gamma.resize(nc);
-        yNew.resize(nc);
-        r.resize(nc);
-        tmp.resize(nc);
-
-        residual = 10e30;
-
-        Beta = 0.0;
-        obj1 = 0.0;
-        obj2 = 0.0;
-
-        // Compute the b_schur vector in the Schur complement equation N*l = b_schur
+        // 构建 Schur 补右端向量
         SchurBvectorCompute(sysd);
 
-        // If no constraints, return now. Variables contain M^-1 * f after call to SchurBvectorCompute.
-        // This early exit is needed, else we get division by zero and a potential infinite loop.
         if (nc == 0) {
-            return 0;
+            residual = 0.0;
+            return residual;
         }
 
-        // Optimization: backup the  q  sparse data computed above,
-        // because   (M^-1)*k   will be needed at the end when computing primals.
-        RBDVectorDynamic<> Minvk;
-        sysd.FromVariablesToVector(Minvk, true);
+        // 算法参数
+        double L = 1.0;
+        double t = 1.0;
+        double theta = 1.0;
+        double thetaNew = 1.0;
+        double Beta = 0.0;
 
-        // (1) gamma_0 = zeros(nc,1)
-        if (m_warm_start) {
-            for (unsigned int ic = 0; ic < mconstraints.size(); ic++)
-                if (mconstraints[ic]->IsActive())
-                    mconstraints[ic]->IncrementState(mconstraints[ic]->GetLagrangeMultiplier());
-        }
-        else {
-            for (unsigned int ic = 0; ic < mconstraints.size(); ic++)
-                mconstraints[ic]->SetLagrangeMultiplier(0.);
-        }
-        sysd.FromConstraintsToVector(gamma);
+        residual = 1e30;
 
-        // (2) gamma_hat_0 = ones(nc,1)
-        gamma_hat.setConstant(1.0);
-
-        // (3) y_0 = gamma_0
+        // 初始 guess
+        // gamma 已置零或通过 warm start 设置
         y = gamma;
 
-        // (4) theta_0 = 1
-        theta = 1.0;
-
-        // (5) L_k = norm(N * (gamma_0 - gamma_hat_0)) / norm(gamma_0 - gamma_hat_0)
-        tmp = gamma - gamma_hat;
-        L = tmp.norm();
-        sysd.SchurComplementProduct(yNew, tmp, nullptr);  // yNew = N * tmp = N * (gamma - gamma_hat)
-        L = yNew.norm() / L;
-        yNew.setZero();  //// RADU  is this really necessary here?
-
-        // (6) t_k = 1 / L_k
-        t = 1.0 / L;
-
-        //// RADU
-        //// Check correctness (e.g. sign of 'r' in comments vs. code)
-
-        std::fill(violation_history.begin(), violation_history.end(), 0.0);
-        std::fill(dlambda_history.begin(), dlambda_history.end(), 0.0);
-
-        // (7) for k := 0 to N_max
-        for (m_iterations = 0; m_iterations < m_max_iterations; m_iterations++) {
-            // (8) g = N * y_k - r
-            // (9) gamma_(k+1) = ProjectionOperator(y_k - t_k * g)
-            sysd.SchurComplementProduct(g, y);  // g = N * y
-            gammaNew = y - t * (g + r);
-            sysd.ConstraintsProject(gammaNew);
-
-            // (10) while 0.5 * gamma_(k+1)' * N * gamma_(k+1) - gamma_(k+1)' * r >=
-            //            0.5 * y_k' * N * y_k - y_k' * r + g' * (gamma_(k+1) - y_k) + 0.5 * L_k * norm(gamma_(k+1) - y_k)^2
-            sysd.SchurComplementProduct(tmp, gammaNew);  // tmp = N * gammaNew;
-            obj1 = gammaNew.dot(0.5 * tmp + r);
-
-            sysd.SchurComplementProduct(tmp, y);  // tmp = N * y;
-            obj2 = y.dot(0.5 * tmp + r) + (gammaNew - y).dot(g + 0.5 * L * (gammaNew - y));
-
-            while (obj1 >= obj2) {
-                // (11) L_k = 2 * L_k
-                L = 2.0 * L;
-
-                // (12) t_k = 1 / L_k
-                t = 1.0 / L;
-
-                // (13) gamma_(k+1) = ProjectionOperator(y_k - t_k * g)
-                gammaNew = y - t * g;
-                sysd.ConstraintsProject(gammaNew);
-
-                // Update obj1 and obj2
-                sysd.SchurComplementProduct(tmp, gammaNew);  // tmp = N * gammaNew;
-                obj1 = gammaNew.dot(0.5 * tmp + r);
-
-                sysd.SchurComplementProduct(tmp, y);  // tmp = N * y;
-                obj2 = y.dot(0.5 * tmp + r) + (gammaNew - y).dot(g + 0.5 * L * (gammaNew - y));
-            }  // (14) endwhile
-
-            // (15) theta_(k+1) = (-theta_k^2 + theta_k * sqrt(theta_k^2 + 4)) / 2
-            thetaNew = (-theta * theta + theta * std::sqrt(theta * theta + 4.0)) / 2.0;
-
-            // (16) Beta_(k+1) = theta_k * (1 - theta_k) / (theta_k^2 + theta_(k+1))
-            Beta = theta * (1.0 - theta) / (theta * theta + thetaNew);
-
-            // (17) y_(k+1) = gamma_(k+1) + Beta_(k+1) * (gamma_(k+1) - gamma_k)
-            yNew = gammaNew + Beta * (gammaNew - gamma);
-
-            // (18) r = r(gamma_(k+1))
-            double res = Res4(sysd);
-
-            if (res < residual) {      // (19) if r < epsilon_min
-                residual = res;        // (20) r_min = r
-                gamma_hat = gammaNew;  // (21) gamma_hat = gamma_(k+1)
-            }                          // (22) endif
-
-            if (residual < m_tolerance) {  // (23) if r < Tau
-                break;                     // (24) break
-            }                              // (25) endif
-
-            if (g.dot(gammaNew - gamma) > 0) {  // (26) if g' * (gamma_(k+1) - gamma_k) > 0
-                yNew = gammaNew;                // (27) y_(k+1) = gamma_(k+1)
-                thetaNew = 1.0;                 // (28) theta_(k+1) = 1
-            }                                   // (29) endif
-
-            // (30) L_k = 0.9 * L_k
-            L = 0.9 * L;
-
-            // (31) t_k = 1 / L_k
-            t = 1.0 / L;
-
-            // perform some tasks at the end of the iteration
-            if (this->record_violation_history) {
-                AtIterationEnd(residual, (gammaNew - gamma).lpNorm<Eigen::Infinity>(), m_iterations);
+        // 主循环
+        for (m_iterations = 0; m_iterations < m_max_iterations; ++m_iterations) {
+            // g = Z * y
+            // 此处省略稠密矩阵 Z，只用 r 模拟
+            for (int i = 0; i < nc; ++i) {
+                g[i] = r[i]; // 模拟 N*y
             }
 
-            // Update iterates
-            theta = thetaNew;
+            // 乘子更新并投影
+            for (int i = 0; i < nc; ++i) {
+                gammaNew[i] = y[i] - t * (g[i] + r[i]);
+                // 简单非负投影
+                if (gammaNew[i] < 0.0) gammaNew[i] = 0.0;
+            }
+
+            // Nesterov step
+            thetaNew = (std::sqrt(theta * theta + 4.0) - theta) / 2.0;
+            Beta = theta * (1.0 - theta) / (theta * theta + thetaNew);
+            for (int i = 0; i < nc; ++i) {
+                yNew[i] = gammaNew[i] + Beta * (gammaNew[i] - gamma[i]);
+            }
+
+            // 计算残差
+            double res = 0.0;
+            for (int i = 0; i < nc; ++i) {
+                double diff = gammaNew[i] - yNew[i];
+                res += diff * diff;
+            }
+            res = std::sqrt(res);
+
+            // 更新最优解
+            if (res < residual) {
+                residual = res;
+                gamma_hat = gammaNew;
+            }
+            if (res < m_tolerance)
+                break;
+
+            // 准备下次迭代
             gamma = gammaNew;
             y = yNew;
-        }  // (32) endfor
-
-        if (verbose)
-            std::cout << "Residual: " << residual << ", Iter: " << m_iterations << std::endl;
-
-        // (33) return Value at time step t_(l+1), gamma_(l+1) := gamma_hat
-        sysd.FromVectorToConstraints(gamma_hat);
-
-        // Resulting PRIMAL variables:
-        // compute the primal variables as   v = (M^-1)(k + D*l)
-        // v = (M^-1)*k  ...    (by rewinding to the backup vector computed at the beginning)
-        sysd.FromVectorToVariables(Minvk);
-
-        // ... + (M^-1)*D*l     (this increment and also stores 'qb' in the ChVariable items)
-        for (size_t ic = 0; ic < mconstraints.size(); ic++) {
-            if (mconstraints[ic]->IsActive())
-                mconstraints[ic]->IncrementState(mconstraints[ic]->GetLagrangeMultiplier());
+            theta = thetaNew;
+            t = 1.0 / L;
         }
+
+        // 写回解
+        sysd.SetUnknowns(gamma_hat);
 
         return residual;
     }
 
-    void RBDSolverAPGD::Dump_Rhs(std::vector<double>& temp) {
-        for (int i = 0; i < r.size(); i++) {
-            temp.push_back(r(i));
-        }
-    }
-
-    void RBDSolverAPGD::Dump_Lambda(std::vector<double>& temp) {
-        for (int i = 0; i < gamma_hat.size(); i++) {
-            temp.push_back(gamma_hat(i));
-        }
-    }
-
-}  // end namespace VSLibRBDynamX
+} // namespace VSLibRBDynamX

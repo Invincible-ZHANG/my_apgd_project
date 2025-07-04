@@ -1,5 +1,8 @@
 ﻿#pragma once
 
+#include <vector>
+
+
 namespace VSLibRBDynamX {
 
     /// 抽象“变量”类（类似于刚体、柔体的运动学/动力学自由度）

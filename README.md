@@ -233,7 +233,18 @@ make
 ## 更新日志 (Changelog)
 
 ---
+### 2025-07-04
 
+ - 完善Adapter/Wrapper 类
+ - 脱离VEROSIM做一个简单DEMO测试工作
+  - 不依靠chrono和verosim的任何相关库来完成这个demo。
+
+---
+### 2025-07-03
+
+ - 增加了接口文件：RBDInterface
+
+---
 ### 2025-07-02
 
 - **add RBDIterativeSolverVI.cpp and RBDIterativeSolverVI.h**  
@@ -345,6 +356,26 @@ Verosim 的做法
 - Chrono 适合大系统（大场景，万级物体），因为它节省内存，只操作需要的块，高效。
 
 - Verosim 适合小型或教学用途，结构清楚，便于理解和可视化。
+
+
+### Adapter/Wrapper
+
+**Q2： 什么是Adapter/Wrapper这一套做法到底是干什么用的？**
+
+A2 ：类比：
+ - 假如你有很多种不同品牌、不同类型的插头（物理对象），
+ -但是你只想用同一个插座（Solver），
+ -你就需要一个转换头（Adapter/Wrapper），这样无论插头什么样，只要有转换头都能用同一个插座。
+对应到你的工程：
+ -物理对象（比如 RBDRigidBody、RBDConstraintResource）：每个数据结构不同，函数不同。
+ -Solver（求解器）：需要“拿到数据、做统一的操作”（比如计算质量逆、设置状态等）。
+ -RBDVariables（接口）：规定了一套“插头标准”（有 GetDOF、GetState、SetState、ComputeMassInverseTimesVector 这些统一操作）。
+ -Adapter/Wrapper（MyRBDVariables）：就是转换头，让各种物理对象都能装到 Solver 里统一用。
+
+实际作用/优点：
+ -你的Solver 只依赖接口，不依赖具体实现，即“只认插头标准，不认品牌”。
+ -以后你增加新的物理对象（比如柔体、流体、某种奇怪的刚体），不用改 Solver，只用写新的 Wrapper 就能接入。
+ -代码扩展性、可维护性极强，比如 Chrono、PhysX、Bullet 等物理引擎底层都是这么做的。
 
 
 
