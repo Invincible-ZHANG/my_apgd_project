@@ -384,3 +384,18 @@ A2 ：类比：
 
 
 
+## 编译指令
+```
+cmake ../.. -G "Visual Studio 16 2019" -A x64
+说明:
+../.. 指向项目根目录中的 CMakeLists.txt
+- G "Visual Studio 16 2019"：选择 VS2019 生成器
+- A x64：指定 64 位架构
+
+cmake --build . --config Debug --target test_apgd
+--config Debug：指定使用 Debug 配置
+--target test_apgd：只编译我们在 CMakeLists 中定义的 test_apgd 可执行文件
+
+```
+
+
